@@ -1,0 +1,288 @@
+<div id="match-game-container" style="width: 100%; height: 600px; border: none; overflow: hidden;">
+  <iframe id="match-game-iframe" src="about:blank" style="width: 100%; height: 100%; border: none;"></iframe>
+</div>
+<script>
+  (function() {
+    var gameHTML = `
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>משחק התאמה: ארובות השמים ותהום רבה</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: turquoise;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #4a4a4a;
+            text-align: center;
+        }
+        .categories {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .category {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 10px;
+            width: 30%;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            min-height: 150px;
+        }
+        #aruvot {
+            border: 3px solid #4caf50;
+        }
+        #tehom {
+            border: 3px solid #2196f3;
+        }
+        .category h2 {
+            font-size: 1.2em;
+            margin-bottom: 5px;
+        }
+        .item-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+            margin-top: 20px;
+        }
+        .item {
+            background-color: #fff;
+            border: 2px solid #000;
+            border-radius: 5px;
+            padding: 10px;
+            cursor: move;
+            transition: all 0.3s ease;
+            font-size: 1em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .item:hover {
+            transform: scale(1.05);
+        }
+        .item i {
+            margin-left: 10px;
+            font-size: 1.5em;
+        }
+        .correct {
+            background-color: #c8e6c9;
+        }
+        .incorrect {
+            background-color: #ffcdd2;
+        }
+        #feedback {
+            margin-top: 20px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        #timer {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        #progress {
+            font-size: 1.1em;
+            margin-top: 10px;
+        }
+        #start-screen {
+            background-color: rgba(255, 255, 255, 0.9);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        #start-button {
+            font-size: 1.2em;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        #instructions {
+            text-align: center;
+            max-width: 600px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="start-screen">
+        <h1>ברוכים הבאים למשחק התאמה: ארובות השמים ותהום רבה</h1>
+        <div id="instructions">
+            <h2>הוראות המשחק:</h2>
+            <p>התאימי בין הפריט לבין הקטגוריה המתאימה, לפי הסרטון שראית קודם.</p>
+            <p>גררי את הפריט המוצג אל הקטגוריה הנכונה: "ארובות השמים" או "תהום רבה".</p>
+            <p>יש לך 15 שניות להתאים כל פריט. בהצלחה!</p>
+        </div>
+        <button id="start-button">התחל משחק</button>
+    </div>
+
+    <h1>משחק התאמה: ארובות השמים ותהום רבה</h1>
+    <div id="timer">זמן נותר: 15 שניות</div>
+    <div class="categories">
+        <div id="aruvot" class="category" ondrop="drop(event)" ondragover="allowDrop(event)">
+            <h2>ארובות השמים <i class="fas fa-cloud" style="color: #4caf50;"></i></h2>
+        </div>
+        <div id="tehom" class="category" ondrop="drop(event)" ondragover="allowDrop(event)">
+            <h2>תהום רבה <i class="fas fa-water" style="color: #2196f3;"></i></h2>
+        </div>
+    </div>
+    <div class="item-container">
+        <div id="current-item" class="item" draggable="true" ondragstart="drag(event)"></div>
+    </div>
+    <div id="feedback"></div>
+    <div id="progress"></div>
+
+    <script>
+        const items = [
+            { text: "מחשבות זרות בתפילה", category: "aruvot", icon: "fas fa-brain", color: "#FF69B4" },
+            { text: "דאגות פרנסה", category: "tehom", icon: "fas fa-coins", color: "#FFD700" },
+            { text: "חוסר ריכוז בלימוד תורה", category: "aruvot", icon: "fas fa-book-open", color: "#8A2BE2" },
+            { text: "בעיות בבית", category: "tehom", icon: "fas fa-home", color: "#FF4500" },
+            { text: "קשיי תחבורה", category: "tehom", icon: "fas fa-bus", color: "#1E90FF" },
+            { text: "הסחות דעת מטכנולוגיה", category: "tehom", icon: "fas fa-mobile-alt", color: "#32CD32" },
+            { text: "לחץ זמן", category: "tehom", icon: "fas fa-clock", color: "#FF6347" },
+            { text: "לחץ חברתי בלבוש", category: "tehom", icon: "fas fa-tshirt", color: "#9932CC" },
+            { text: "קושי בשיעורי בית", category: "tehom", icon: "fas fa-pencil-alt", color: "#FF8C00" },
+            { text: "קנאה ברוחניות של אחרים", category: "aruvot", icon: "fas fa-synagogue", color: "#4682B4" },
+            { text: "פיתוי לאכול ממתקים לא כשרים", category: "aruvot", icon: "fas fa-candy-cane", color: "#FF1493" },
+            { text: "עייפות בזמן לימוד", category: "aruvot", icon: "fas fa-bed", color: "#1E90FF" },
+            { text: "דיבור בשעת התפילה", category: "aruvot", icon: "fas fa-comments", color: "#32CD32" },
+            { text: "לשכוח להתפלל בגלל משחקי מחשב", category: "aruvot", icon: "fas fa-gamepad", color: "#FF4500" },
+            { text: "לשכוח ציוד לבית הספר", category: "tehom", icon: "fas fa-school", color: "#9932CC" },
+            { text: "התמודדות עם יצר הרע", category: "aruvot", icon: "fas fa-balance-scale", color: "#FFD700" },
+            { text: "קושי לקום בבוקר לתפילה", category: "aruvot", icon: "fas fa-sun", color: "#FF6347" }
+        ];
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        let currentItemIndex = 0;
+        let timeLeft = 15;
+        const timerElement = document.getElementById('timer');
+        const currentItemElement = document.getElementById('current-item');
+        const progressElement = document.getElementById('progress');
+        let timerInterval;
+
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            shuffleArray(items);
+            displayCurrentItem();
+            updateProgress();
+            startTimer();
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = 15;
+            updateTimerDisplay();
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    nextItem();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            timerElement.textContent = \`זמן נותר: \${timeLeft} שניות\`;
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        function drag(ev) {
+            ev.dataTransfer.setData("text", ev.target.id);
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            clearInterval(timerInterval);
+            var data = ev.dataTransfer.getData("text");
+            var draggedElement = document.getElementById(data);
+            
+            var targetCategory = ev.target.closest('.category').id;
+            var itemCategory = items[currentItemIndex].category;
+
+            var feedbackElement = document.getElementById('feedback');
+
+            if (targetCategory === itemCategory) {
+                feedbackElement.textContent = 'נכון מאוד!';
+                feedbackElement.style.color = 'green';
+                nextItem();
+            } else {
+                feedbackElement.textContent = 'נסי שנית';
+                feedbackElement.style.color = 'red';
+                startTimer();
+            }
+        }
+
+        function nextItem() {
+            currentItemIndex++;
+            updateProgress();
+            if (currentItemIndex < items.length) {
+                displayCurrentItem();
+                startTimer();
+            } else {
+                endGame();
+            }
+        }
+
+        function displayCurrentItem() {
+            const item = items[currentItemIndex];
+            currentItemElement.innerHTML = \`<i class="\${item.icon}" style="color: \${item.color};"></i> \${item.text}\`;
+            currentItemElement.setAttribute('data-category', item.category);
+        }
+
+        function updateProgress() {
+            progressElement.textContent = \`התקדמות: \${currentItemIndex} / \${items.length}\`;
+        }
+
+        function endGame() {
+            clearInterval(timerInterval);
+            currentItemElement.style.display = 'none';
+            timerElement.style.display = 'none';
+            document.getElementById('feedback').textContent = 'המשחק הסתיים!';
+        }
+
+        document.getElementById('start-button').addEventListener('click', startGame);
+    </script>
+</body>
+</html>
+    `;
+    
+    var iframe = document.getElementById('match-game-iframe');
+    var doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open();
+    doc.write(gameHTML);
+    doc.close();
+  })();
+</script>
